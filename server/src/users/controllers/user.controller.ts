@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, Res } from '@nestjs/common';
-import { Response } from 'express';
+import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
+import { Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
 import { UserDto } from '../dto/user.dto';
 import { UserService } from '../services/user.service';
@@ -11,6 +11,15 @@ export class UserController {
   private signToken(id: number) {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN,
+    });
+  }
+
+  private verifyToken(token: string) {
+    return new Promise((resolve, reject) => {
+      jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) reject();
+        else resolve(decoded);
+      });
     });
   }
 
@@ -39,17 +48,41 @@ export class UserController {
         message: 'Please provide valid email and password',
       });
 
-    const user = await this.userService.getUserBasedOnEmail(loginUserDto.email, loginUserDto.password);
+    const user = await this.userService.findUserByEmail(loginUserDto.email, loginUserDto.password);
 
     if (!user) return res.status(401).json({ message: 'Incorrect email or password' });
 
+    const token = this.signToken(user.id);
     return res.status(200).send({
-      data: user,
+      status: 'success',
+      token,
     });
   }
 
+  // Protected route.
   @Get()
-  async getAllUsers() {
-    return this.userService.getUsers();
+  async getAllUsers(@Req() req: Request, @Res() res: Response) {
+    let token: string;
+    let decoded: any;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    // Proceed if we provided an autorization token.
+    if (!token) return res.status(401).json({ message: 'You are not logged in!, Please log in to get access.' });
+    try {
+      decoded = await this.verifyToken(token);
+    } catch (error) {
+      return res.status(401).json({ message: 'Invalid token!' });
+    }
+
+    // Token exists but user dosen't.
+    const userExists = await this.userService.findUserById(decoded.id);
+    if (!userExists) return res.status(401).json({ message: "User for this token dosen't exist." });
+
+    const users = await this.userService.getUsers();
+    // Once access granted.
+    return res.json({ data: { users } });
   }
 }
