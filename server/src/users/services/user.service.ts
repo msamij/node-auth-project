@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { userParams } from 'src/types/userParams';
@@ -25,13 +26,25 @@ export class UserService {
     return this.userRepository.find();
   }
 
-  async findUserByEmail(email: string, password: string): Promise<User> {
+  async findUserByEmailAndPassword(email: string, password: string): Promise<User> {
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user || !(await bcrypt.compare(password, user.password))) return null;
     return user;
   }
 
+  async findUserByEmail(email: string): Promise<User> {
+    return await this.userRepository.findOne({ where: { email } });
+  }
+
   async findUserById(id: number): Promise<User> {
     return await this.userRepository.findOne({ where: { id } });
+  }
+
+  async createPasswordResetToken(user: User): Promise<string> {
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    user.passwordResetExpires = Date.now() + 10 * 60 * 100 + '';
+    await this.userRepository.save(user);
+    return resetToken;
   }
 }

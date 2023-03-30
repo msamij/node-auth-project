@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
+import * as nodemailer from 'nodemailer';
 import { UserDto } from '../dto/user.dto';
 import { UserService } from '../services/user.service';
 
@@ -48,7 +49,7 @@ export class UserController {
         message: 'Please provide valid email and password',
       });
 
-    const user = await this.userService.findUserByEmail(loginUserDto.email, loginUserDto.password);
+    const user = await this.userService.findUserByEmailAndPassword(loginUserDto.email, loginUserDto.password);
 
     if (!user) return res.status(401).json({ message: 'Incorrect email or password' });
 
@@ -84,5 +85,15 @@ export class UserController {
     const users = await this.userService.getUsers();
     // Once access granted.
     return res.json({ data: { users } });
+  }
+
+  @Post('/forgotPassword')
+  async forgotPassword(@Req() req: Request, @Res() res: Response, @Body() userDto: UserDto) {
+    const user = await this.userService.findUserByEmail(userDto.email);
+    if (!user) return res.status(404).json({ message: 'User with email address not found' });
+
+    const resetToken = await this.userService.createPasswordResetToken(user);
+
+    return res.status(200).json({ data: { user } });
   }
 }
