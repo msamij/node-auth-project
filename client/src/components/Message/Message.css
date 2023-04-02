@@ -1,0 +1,8 @@
+.message {
+  color: var(--color-light-3);
+  background-color: var(--color-primary-2);
+  font-size: 1.3rem;
+  padding: 1rem 2.5rem;
+  border-radius: 3px;
+  animation: fadein 0.3s ease-in 0s 1;
+}

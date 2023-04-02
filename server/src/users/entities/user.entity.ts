@@ -16,10 +16,4 @@ export class User {
 
   @Column()
   password: string;
-
-  @Column({ default: '' })
-  passwordResetToken: string;
-
-  @Column({ default: '' })
-  passwordResetExpires: string;
 }

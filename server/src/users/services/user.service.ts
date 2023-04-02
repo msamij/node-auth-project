@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import * as crypto from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { userParams } from 'src/types/userParams';
@@ -22,7 +21,7 @@ export class UserService {
     return this.userRepository.save(user);
   }
 
-  getUsers(): Promise<User[]> {
+  findAllUsers(): Promise<User[]> {
     return this.userRepository.find();
   }
 
@@ -38,13 +37,5 @@ export class UserService {
 
   async findUserById(id: number): Promise<User> {
     return await this.userRepository.findOne({ where: { id } });
-  }
-
-  async createPasswordResetToken(user: User): Promise<string> {
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.passwordResetExpires = Date.now() + 10 * 60 * 100 + '';
-    await this.userRepository.save(user);
-    return resetToken;
   }
 }
